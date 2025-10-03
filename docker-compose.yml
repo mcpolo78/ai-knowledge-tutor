@@ -13,8 +13,8 @@ services:
       - DATABASE_URL=sqlite:///./knowledge_tutor.db
       - MAX_FILE_SIZE=10485760
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/knowledge_tutor.db:/app/knowledge_tutor.db
+      - uploads_data:/app/uploads
+      - db_data:/app
     networks:
       - ai-tutor-network
 
@@ -35,3 +35,7 @@ services:
 networks:
   ai-tutor-network:
     driver: bridge
+
+volumes:
+  uploads_data:
+  db_data:
