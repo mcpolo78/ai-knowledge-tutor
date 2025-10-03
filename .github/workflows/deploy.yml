@@ -17,11 +17,11 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             # Navigate to project directory
-            cd /var/www/ai-knowledge-tutor || mkdir -p /var/www/ai-knowledge-tutor && cd /var/www/ai-knowledge-tutor
+            cd /var/www/ai-knowledge-tutor
 
             # Pull latest code
             if [ -d ".git" ]; then
@@ -38,29 +38,29 @@ jobs:
             fi
 
             # Stop existing containers
-            docker-compose down || true
+            sudo docker-compose down || true
 
             # Build and start containers
-            docker-compose up -d --build
+            sudo docker-compose up -d --build
 
             # Clean up old images
-            docker image prune -f
+            sudo docker image prune -f
 
       - name: Setup nginx config (first time only)
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             # Copy nginx config if not exists
             if [ ! -f "/etc/nginx/sites-available/tutor.marcchesnel.com" ]; then
-              cp /var/www/ai-knowledge-tutor/deployment/nginx-tutor.marcchesnel.com /etc/nginx/sites-available/tutor.marcchesnel.com
-              ln -sf /etc/nginx/sites-available/tutor.marcchesnel.com /etc/nginx/sites-enabled/
+              sudo cp /var/www/ai-knowledge-tutor/deployment/nginx-tutor.marcchesnel.com /etc/nginx/sites-available/tutor.marcchesnel.com
+              sudo ln -sf /etc/nginx/sites-available/tutor.marcchesnel.com /etc/nginx/sites-enabled/
 
               # Get SSL certificate
-              certbot --nginx -d tutor.marcchesnel.com --non-interactive --agree-tos --email marc@marcchesnel.com
+              sudo certbot --nginx -d tutor.marcchesnel.com --non-interactive --agree-tos --email marc@marcchesnel.com
 
               # Reload nginx
-              nginx -t && systemctl reload nginx
+              sudo nginx -t && sudo systemctl reload nginx
             fi

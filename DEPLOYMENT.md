@@ -16,11 +16,15 @@ Go to your GitHub repo → Settings → Secrets → Actions, add:
 
 ```
 SERVER_HOST=116.203.191.168
-SERVER_USER=root
-SERVER_PASSWORD=HetznerAdmin2024!
+DEPLOY_USER=deployer
+DEPLOY_SSH_KEY=<contents of C:/Users/dspiv/.ssh/deployer private key>
 OPENAI_API_KEY=your-openai-api-key
 SECRET_KEY=your-strong-secret-key
 ```
+
+**To get DEPLOY_SSH_KEY:** Run `cat C:/Users/dspiv/.ssh/deployer` and copy the entire output.
+
+**Note:** The `deployer` user can be reused for ALL your projects with the same SSH key.
 
 ### 2. Add DNS Record
 
@@ -47,18 +51,26 @@ GitHub Actions will:
 4. Build and start Docker containers
 5. Setup nginx config and SSL certificate
 
+## Security
+
+**Deployment User**: A dedicated `deployer` user with minimal sudo permissions:
+- Can run Docker commands
+- Can manage nginx (reload/restart)
+- Can run certbot for SSL
+- Cannot access root or other system functions
+- SSH key authentication only (no password)
+
 ## Manual Deployment (Alternative)
 
-### On Server
+### On Server (as deployer user)
 
 ```bash
-# SSH into server
-ssh root@116.203.191.168
+# SSH into server as deployer
+ssh -i C:/Users/dspiv/.ssh/deployer deployer@116.203.191.168
 
 # Clone repo
-cd /var/www
-git clone https://github.com/mcpolo78/ai-knowledge-tutor.git
-cd ai-knowledge-tutor
+cd /var/www/ai-knowledge-tutor
+git clone https://github.com/mcpolo78/ai-knowledge-tutor.git .
 
 # Create .env file
 cat > .env <<EOF
@@ -67,18 +79,18 @@ SECRET_KEY=your-secret-key
 REACT_APP_API_URL=https://tutor.marcchesnel.com
 EOF
 
-# Build and start
+# Build and start (deployer is in docker group, no sudo needed)
 docker-compose up -d --build
 
-# Setup nginx
-cp deployment/nginx-tutor.marcchesnel.com /etc/nginx/sites-available/tutor.marcchesnel.com
-ln -s /etc/nginx/sites-available/tutor.marcchesnel.com /etc/nginx/sites-enabled/
+# Setup nginx (first time only, needs sudo)
+sudo cp deployment/nginx-tutor.marcchesnel.com /etc/nginx/sites-available/tutor.marcchesnel.com
+sudo ln -sf /etc/nginx/sites-available/tutor.marcchesnel.com /etc/nginx/sites-enabled/
 
-# Get SSL certificate
-certbot --nginx -d tutor.marcchesnel.com --non-interactive --agree-tos --email marc@marcchesnel.com
+# Get SSL certificate (needs sudo)
+sudo certbot --nginx -d tutor.marcchesnel.com --non-interactive --agree-tos --email marc@marcchesnel.com
 
-# Reload nginx
-nginx -t && systemctl reload nginx
+# Reload nginx (needs sudo)
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ## Updating
@@ -94,7 +106,7 @@ git push origin master
 ### Manual
 
 ```bash
-ssh root@116.203.191.168
+ssh -i C:/Users/dspiv/.ssh/deployer deployer@116.203.191.168
 cd /var/www/ai-knowledge-tutor
 git pull origin master
 docker-compose up -d --build
